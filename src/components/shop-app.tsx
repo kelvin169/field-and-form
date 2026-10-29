@@ -62,41 +62,42 @@ export function ShopApp() {
 
   return (
     <div className="min-h-screen bg-bg text-ink">
+      <div className="bg-bar px-4 py-2 text-center text-xs tracking-wide text-primary-fg">
+        Free shipping on orders over $75 · Easy 30-day returns
+      </div>
       <header className="border-b border-line bg-surface">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <div>
-            <p className="font-display text-2xl tracking-tight">Field & Form</p>
-            <p className="text-sm text-muted">Home goods, made to stay</p>
-          </div>
+          <p className="text-sm font-semibold tracking-[0.22em] uppercase">Field & Form</p>
+          <nav className="hidden gap-6 text-sm text-ink sm:flex">
+            <span>Catalog</span>
+            <span>Shipping</span>
+            <span>Returns</span>
+          </nav>
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-primary-fg"
+            className="inline-flex min-h-11 items-center gap-2 bg-primary px-4 text-sm font-medium text-primary-fg"
           >
             <MessageCircle className="size-4" aria-hidden />
-            Ask the shop
+            Help
           </button>
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-6xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[1fr_22rem] lg:items-start">
+      <main className="mx-auto grid max-w-6xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[1fr_20rem] lg:items-start">
         <section>
-          <div className="mb-5 flex items-end justify-between gap-3">
-            <div>
-              <h1 className="font-display text-3xl leading-tight sm:text-4xl">The floor</h1>
-              <p className="mt-1 max-w-md text-muted">
-                Search the catalog, then ask the assistant about fit, shipping, or a demo order.
-              </p>
-            </div>
+          <div className="mb-6">
+            <h1 className="text-2xl font-medium tracking-tight">All products</h1>
+            <p className="mt-1 text-sm text-muted">{visible.length} products</p>
           </div>
-          <label className="mb-5 flex min-h-12 items-center gap-2 rounded-full border border-line bg-surface px-4">
+          <label className="mb-6 flex min-h-11 items-center gap-2 border border-line px-3">
             <Search className="size-4 text-muted" aria-hidden />
             <span className="sr-only">Search products</span>
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search kitchen, travel, textiles…"
-              className="w-full bg-transparent py-3 outline-none placeholder:text-muted"
+              placeholder="Search"
+              className="w-full bg-transparent py-2 text-sm outline-none placeholder:text-muted"
             />
           </label>
 
@@ -105,17 +106,15 @@ export function ShopApp() {
               Nothing matches that. Try “wool”, “lamp”, or clear the search.
             </p>
           ) : (
-            <ul className="grid gap-4 sm:grid-cols-2">
+            <ul className="grid grid-cols-2 gap-x-4 gap-y-8 lg:grid-cols-3">
               {visible.map((p) => (
                 <li key={p.id}>
-                  <article className="overflow-hidden rounded-card border border-line bg-surface">
+                  <article>
                     <button type="button" onClick={() => setActive(p)} className="block w-full text-left">
-                      <img src={p.image} alt={p.name} className="aspect-square w-full object-cover" />
-                      <div className="space-y-1 p-4">
-                        <p className="text-xs uppercase tracking-wide text-muted">{p.category}</p>
-                        <h2 className="font-display text-xl leading-tight">{p.name}</h2>
-                        <p className="text-sm text-muted">{p.blurb}</p>
-                        <p className="pt-1 font-semibold">${p.price}</p>
+                      <img src={p.image} alt={p.name} className="aspect-square w-full bg-line object-cover" />
+                      <div className="pt-3">
+                        <h2 className="text-sm">{p.name}</h2>
+                        <p className="mt-1 text-sm text-muted">${p.price.toFixed(2)}</p>
                       </div>
                     </button>
                   </article>
@@ -162,7 +161,7 @@ export function ShopApp() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="fixed right-4 bottom-4 z-20 inline-flex size-14 items-center justify-center rounded-full bg-primary text-primary-fg shadow-lg lg:hidden"
+          className="fixed right-4 bottom-4 z-20 inline-flex size-14 items-center justify-center bg-primary text-primary-fg lg:hidden"
           aria-label="Open shop assistant"
         >
           <MessageCircle className="size-6" />
@@ -171,7 +170,7 @@ export function ShopApp() {
 
       {active && (
         <div className="fixed inset-0 z-30 flex items-end justify-center bg-ink/40 p-3 sm:items-center" role="dialog" aria-modal>
-          <div className="max-h-[90vh] w-full max-w-lg overflow-auto rounded-card bg-surface">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-auto bg-surface">
             <img src={active.image} alt="" className="aspect-[4/3] w-full object-cover" />
             <div className="space-y-3 p-5">
               <div className="flex items-start justify-between gap-3">
@@ -188,7 +187,7 @@ export function ShopApp() {
               <p className="font-display text-3xl">${active.price}</p>
               <button
                 type="button"
-                className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-accent px-4 font-semibold text-surface"
+                className="inline-flex min-h-11 w-full items-center justify-center bg-primary px-4 text-sm font-medium text-primary-fg"
                 onClick={() => {
                   setActive(null);
                   void send(`Tell me if the ${active.name} is a good fit, and the price and shipping.`);
@@ -227,10 +226,10 @@ function ChatPanel({
   onClose: () => void;
 }) {
   return (
-    <section className="flex h-[min(32rem,70vh)] flex-col overflow-hidden rounded-card border border-line bg-surface shadow-sm">
+    <section className="flex h-[min(32rem,70vh)] flex-col overflow-hidden border border-line bg-surface">
       <header className="flex items-center justify-between border-b border-line px-4 py-3">
         <div>
-          <p className="font-display text-lg leading-tight">Shop assistant</p>
+          <p className="text-sm font-medium">Shop assistant</p>
           <p className="text-xs text-muted">Products, shipping, returns, orders</p>
         </div>
         <button type="button" className="rounded-full p-2 lg:hidden" onClick={onClose} aria-label="Close chat">
@@ -260,7 +259,7 @@ function ChatPanel({
             type="button"
             disabled={busy}
             onClick={() => onStarter(s)}
-            className="shrink-0 rounded-full border border-line px-3 py-2 text-xs text-ink disabled:opacity-50"
+            className="shrink-0 border border-line px-3 py-2 text-xs text-ink disabled:opacity-50"
           >
             {s}
           </button>
@@ -277,13 +276,13 @@ function ChatPanel({
           value={draft}
           onChange={(e) => onDraft(e.target.value)}
           placeholder="Ask about a product or an order…"
-          className="min-h-11 flex-1 rounded-full border border-line bg-bg px-4 outline-none"
+          className="min-h-11 flex-1 border border-line bg-bg px-3 text-sm outline-none"
         />
         <button
           type="submit"
           disabled={busy || !draft.trim()}
           aria-label="Send"
-          className="inline-flex size-11 items-center justify-center rounded-full bg-primary text-primary-fg disabled:opacity-40"
+          className="inline-flex size-11 items-center justify-center bg-primary text-primary-fg disabled:opacity-40"
         >
           <Send className="size-4" />
         </button>

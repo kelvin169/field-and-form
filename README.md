@@ -32,7 +32,9 @@ export XAI_API_KEY=your_key   # optional, enables the assistant
 npm run dev
 ```
 
-The dev server listens on port 8080.
+## CI
+
+GitHub Actions (`.github/workflows/ci.yml`) runs `npm ci`, typecheck, and a production build on every push to `main` and on pull requests. No API key is required for the workflow.
 
 ## Layout
 

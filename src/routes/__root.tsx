@@ -33,6 +33,12 @@ export const Route = createRootRoute({
         <HeadContent />
       </head>
       <body>
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{if(localStorage.getItem('field-form-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}",
+          }}
+        />
         <PreviewHostBridge />
         <AuthProvider>
           <Outlet />

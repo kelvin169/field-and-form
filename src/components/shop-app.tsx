@@ -1,5 +1,5 @@
-import { useMemo, useRef, useState, type RefObject } from "react";
-import { MessageCircle, Search, Send, X } from "lucide-react";
+import { Component, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
+import { MessageCircle, Moon, Search, Send, Sun, X } from "lucide-react";
 import { PRODUCTS, type Product } from "@/lib/catalog";
 import { askShop, type ChatTurn } from "@/lib/chat.functions";
 
@@ -10,6 +10,14 @@ const STARTERS = [
   "Compare the throw and the slippers",
 ];
 
+const CHAT_KEY = "field-form-chat";
+const SESSION_KEY = "field-form-session";
+const GREETING: ChatTurn = {
+  role: "assistant",
+  content:
+    "Hello — I can help you find something in the shop, or answer shipping, returns, and order questions. Demo orders: FF-1042, FF-1108, FF-0981.",
+};
+
 export function ShopApp() {
   const [query, setQuery] = useState("");
   const [active, setActive] = useState<Product | null>(null);
@@ -17,14 +25,38 @@ export function ShopApp() {
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [turns, setTurns] = useState<ChatTurn[]>([
-    {
-      role: "assistant",
-      content:
-        "Hello — I can help you find something in the shop, or answer shipping, returns, and order questions. Demo orders: FF-1042, FF-1108, FF-0981.",
-    },
-  ]);
+  const [dark, setDark] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  const [sessionId, setSessionId] = useState("guest");
+  const [turns, setTurns] = useState<ChatTurn[]>([GREETING]);
   const scroller = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(CHAT_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as ChatTurn[];
+        if (Array.isArray(parsed) && parsed.every((t) => t && (t.role === "user" || t.role === "assistant") && typeof t.content === "string")) {
+          setTurns(parsed.slice(-20));
+        }
+      }
+      let id = localStorage.getItem(SESSION_KEY);
+      if (!id) {
+        id = crypto.randomUUID();
+        localStorage.setItem(SESSION_KEY, id);
+      }
+      setSessionId(id);
+    } catch {
+      /* keep the greeting */
+    }
+    setHydrated(true);
+    setDark(document.documentElement.classList.contains("dark"));
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(CHAT_KEY, JSON.stringify(turns.slice(-20)));
+  }, [turns, hydrated]);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -44,7 +76,7 @@ export function ShopApp() {
     setError(null);
     setOpen(true);
     try {
-      const result = await askShop({ data: { messages: next } });
+      const result = await askShop({ data: { messages: next, sessionId } });
       if (!result.ok) {
         setError(result.error);
       } else {
@@ -73,14 +105,30 @@ export function ShopApp() {
             <span>Shipping</span>
             <span>Returns</span>
           </nav>
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="inline-flex min-h-11 items-center gap-2 bg-primary px-4 text-sm font-medium text-primary-fg"
-          >
-            <MessageCircle className="size-4" aria-hidden />
-            Help
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-pressed={dark}
+              aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+              onClick={() => {
+                const next = !document.documentElement.classList.contains("dark");
+                document.documentElement.classList.toggle("dark", next);
+                localStorage.setItem("field-form-theme", next ? "dark" : "light");
+                setDark(next);
+              }}
+              className="inline-flex size-11 items-center justify-center border border-line"
+            >
+              {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+            </button>
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              className="inline-flex min-h-11 items-center gap-2 bg-primary px-4 text-sm font-medium text-primary-fg"
+            >
+              <MessageCircle className="size-4" aria-hidden />
+              Help
+            </button>
+          </div>
         </div>
       </header>
 
@@ -125,7 +173,8 @@ export function ShopApp() {
         </section>
 
         <aside className="hidden lg:block">
-          <ChatPanel
+          <ChatBoundary>
+            <ChatPanel
             open
             turns={turns}
             draft={draft}
@@ -137,11 +186,13 @@ export function ShopApp() {
             onStarter={(s) => void send(s)}
             onClose={() => undefined}
           />
+          </ChatBoundary>
         </aside>
       </main>
 
       {open && (
         <div className="fixed inset-x-0 bottom-0 z-20 p-3 lg:hidden">
+          <ChatBoundary>
           <ChatPanel
             open
             turns={turns}
@@ -154,6 +205,7 @@ export function ShopApp() {
             onStarter={(s) => void send(s)}
             onClose={() => setOpen(false)}
           />
+          </ChatBoundary>
         </div>
       )}
 
@@ -201,6 +253,36 @@ export function ShopApp() {
       )}
     </div>
   );
+}
+
+function ChatBoundary({ children }: { children: ReactNode }) {
+  return <ChatBoundaryInner>{children}</ChatBoundaryInner>;
+}
+
+class ChatBoundaryInner extends Component<{ children: ReactNode }, { message: string | null }> {
+  state = { message: null as string | null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { message: error.message || "The assistant hit a problem." };
+  }
+
+  render() {
+    if (this.state.message) {
+      return (
+        <section className="border border-line bg-surface p-4 text-sm">
+          <p>The chat stopped unexpectedly.</p>
+          <button
+            type="button"
+            className="mt-3 min-h-11 bg-primary px-4 text-primary-fg"
+            onClick={() => this.setState({ message: null })}
+          >
+            Try again
+          </button>
+        </section>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 function ChatPanel({

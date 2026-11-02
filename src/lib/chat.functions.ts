@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
-import { formatCatalog, POLICIES } from "@/lib/catalog";
+import { formatCatalog, localReply, POLICIES } from "@/lib/catalog";
+import { rateLimit } from "@/lib/rate-limit";
 
 export type ChatTurn = { role: "user" | "assistant"; content: string };
 
@@ -19,7 +20,7 @@ Orders: ${POLICIES.orders}
 Care: ${POLICIES.care}`;
 
 export const askShop = createServerFn({ method: "POST" })
-  .validator((input: { messages: ChatTurn[] }) => {
+  .validator((input: { messages: ChatTurn[]; sessionId?: string }) => {
     const messages = (input.messages ?? []).slice(-8).map((m) => ({
       role: m.role === "assistant" ? ("assistant" as const) : ("user" as const),
       content: String(m.content ?? "").slice(0, 800),
@@ -27,12 +28,21 @@ export const askShop = createServerFn({ method: "POST" })
     if (!messages.length || messages[messages.length - 1]?.role !== "user") {
       throw new Error("Send a message first.");
     }
-    return { messages };
+    const sessionId = String(input.sessionId ?? "guest").slice(0, 64);
+    return { messages, sessionId };
   })
   .handler(async ({ data }) => {
+    const limited = rateLimit(data.sessionId);
+    if (!limited.ok) {
+      return {
+        ok: false as const,
+        error: `Too many messages. Try again in ${limited.retryAfter}s.`,
+      };
+    }
     const apiKey = process.env.XAI_API_KEY;
+    const last = data.messages[data.messages.length - 1]?.content ?? "";
     if (!apiKey) {
-      return { ok: false as const, error: "The shop assistant is unavailable right now." };
+      return { ok: true as const, text: localReply(last) };
     }
 
     const res = await fetch("https://api.x.ai/v1/chat/completions", {
@@ -50,7 +60,7 @@ export const askShop = createServerFn({ method: "POST" })
     });
 
     if (!res.ok) {
-      return { ok: false as const, error: `Assistant error (${res.status}). Try again.` };
+      return { ok: true as const, text: localReply(last) };
     }
 
     const body = (await res.json()) as {

@@ -28,6 +28,17 @@
   }
 }
 
+html.dark {
+  --color-bg: #121212;
+  --color-surface: #1c1c1c;
+  --color-ink: #f3f3f3;
+  --color-muted: #a3a3a3;
+  --color-line: #333333;
+  --color-primary: #f3f3f3;
+  --color-primary-fg: #121212;
+  --color-bar: #000000;
+  color-scheme: dark;
+}
 @media (prefers-reduced-motion: reduce) {
   * {
     animation: none !important;

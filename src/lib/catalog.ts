@@ -88,3 +88,49 @@ export function formatCatalog(): string {
       `${p.name} (id ${p.id}) — $${p.price}, ${p.category}, stock ${p.stock}. ${p.blurb} ${p.details}`,
   ).join("\n");
 }
+
+export function localReply(question: string): string {
+  const q = question.toLowerCase();
+
+  const order = q.match(/ff-?\d{3,}/i);
+  if (order || q.includes("order") || q.includes("tracking") || q.includes("where is")) {
+    if (q.includes("1042")) {
+      return "Order FF-1042 is shipped. Tracking number 1Z9FF204. Standard delivery is 3–6 business days inside the US.";
+    }
+    if (q.includes("1108")) {
+      return "Order FF-1108 is still processing and has not been scanned by the carrier yet. It should ship within 1–2 business days.";
+    }
+    if (q.includes("0981")) {
+      return "Order FF-0981 was delivered last Tuesday. If something is missing, start a return within 30 days of delivery.";
+    }
+    return POLICIES.orders;
+  }
+
+  if (q.includes("return") || q.includes("refund") || q.includes("exchange")) return POLICIES.returns;
+  if (q.includes("ship") || q.includes("deliver")) return POLICIES.shipping;
+  if (q.includes("care") || q.includes("wash") || q.includes("clean")) return POLICIES.care;
+
+  const under = q.match(/under\s*\$?\s*(\d+)/);
+  let pool = PRODUCTS;
+  if (under) {
+    const max = Number(under[1]);
+    pool = PRODUCTS.filter((p) => p.price < max);
+  } else {
+    const hits = PRODUCTS.filter((p) => q.includes(p.name.toLowerCase()) || q.includes(p.id) || q.includes(p.category.toLowerCase()));
+    if (hits.length) pool = hits;
+  }
+
+  if (q.includes("compare") || pool.length === 2 && q.includes("and")) {
+    return pool
+      .slice(0, 3)
+      .map((p) => `${p.name}: $${p.price}. ${p.blurb} ${p.stock} in stock.`)
+      .join("\n");
+  }
+
+  if (!pool.length) {
+    return "Nothing in the catalog matches that budget. The slippers are $54, the carafe is $68, and plates are $72.";
+  }
+
+  const lines = pool.map((p) => `• ${p.name} — $${p.price}. ${p.blurb} (${p.stock} in stock)`);
+  return `${under ? `Under $${under[1]}:\n` : "From the catalog:\n"}${lines.join("\n")}\n\n${POLICIES.shipping}`;
+}
